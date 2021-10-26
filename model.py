@@ -10,17 +10,28 @@ from sklearn.pipeline import Pipeline
 from sklearn import preprocessing
 from keras.utils import np_utils
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
-
+import re
+import spacy
+from spacy.lang.en.stop_words import STOP_WORDS
+import string
+punctuations = string.punctuation
+stop_words = spacy.lang.en.stop_words.STOP_WORDS
+nlp = spacy.load("en_core_web_sm")
 
 class Model:
     max_vocab_length = 10000
     max_length = 20
-    epochs = 1
+    epochs = 5
+    path = ""
 
-    def data_set(self):
+    def __init__(self, p):
+        self.path = p
+
+
+    def data_set(self, path):
         
         # read tweets and tags csv files
-        tweets = pd.read_csv('/home/kburakozer/Documents/SWE/SWE/3. Term/SWE599/Airline/archive/Tweets.csv')
+        tweets = pd.read_csv(path)
 
         sentences = tweets["text"]
         labels = tweets["airline_sentiment"]
@@ -33,8 +44,38 @@ class Model:
                                                                                     labels,
                                                                                     test_size=0.2,
                                                                                     random_state=42)
+        for i in range(len(train_sentences)):
+            sentence = self.tokenize(train_sentences[i])
+            train_sentences[i] = sentence
 
         return train_sentences, val_sentences, train_labels, val_labels
+
+    def tokenize(self, words):
+        words = words.split(',')
+        new_list = []
+        new_str = " "
+        tokenized_str = " "
+
+        for item in words:
+            item = re.sub(r"[0-9]", '', item)
+            item = re.sub(r'#\S+', '', item)
+            item = re.sub(r'\S@\S+', '', item)
+            item = re.sub(r'\S+com', '', item)
+            table = item.maketrans("", "", punctuations)
+            item = item.translate(table)
+            new_list.append(item)
+        
+        #creating token object
+        tokens = nlp(new_str.join(new_list))
+
+        
+
+        #lower, strip and lemmatize
+        tokens = [word.lemma_.lower().strip() if word.lemma_ != "-PRON-" else word.lower_ for word in tokens]
+        
+        #remove stopwords, and exclude words less than 2 characters
+        tokens = [word for word in tokens if word not in stop_words and word not in punctuations and len(word) > 2]
+        return tokenized_str.join(tokens) 
 
 
     def vectorizer(self):       
@@ -42,7 +83,7 @@ class Model:
                                     output_mode="int",
                                     output_sequence_length=self.max_length)
 
-        train_sentences, val_sentences, train_labels, val_labels = self.data_set()
+        train_sentences, val_sentences, train_labels, val_labels = self.data_set(self.path)
         text_vectorizer.adapt(train_sentences)
 
         return text_vectorizer
@@ -56,7 +97,7 @@ class Model:
 
 
     def bayes_model(self):
-        train_sentences, val_sentences, train_labels, val_labels = self.data_set()
+        train_sentences, val_sentences, train_labels, val_labels = self.data_set(self.path)
         model = Pipeline([
             ("tfidf", TfidfVectorizer()),
             ("clf", MultinomialNB())
@@ -77,15 +118,19 @@ class Model:
         return model_results
 
     def LSTM(self):
-        train_sentences, val_sentences, train_labels, val_labels = self.data_set()
+        train_sentences, val_sentences, train_labels, val_labels = self.data_set(self.path)
         inputs = layers.Input(shape=(1,), dtype="string")
         embedding = self.embedding()
         text_vectorizer = self.vectorizer()
         x = text_vectorizer(inputs)
         x = embedding(x)
         x = layers.LSTM(64, return_sequences=True)(x)
+        x = layers.Dropout(0.2)(x)
         x = layers.LSTM(64)(x)
+       
         x = layers.Dense(64, activation="relu")(x)
+        x = layers.Dense(32, activation="relu")(x)
+        x = layers.Dense(16, activation='relu')(x)
         outputs = layers.Dense(3, activation="softmax")(x)
         model = tf.keras.Model(inputs, outputs)
 
