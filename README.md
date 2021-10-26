@@ -1,9 +1,5 @@
-# Group3-Pro
+# Airline Sentiment Analysis
 
-SWE574 team project
+Project
 
-## Wiki Page
 
-- [Wiki](https://gitlab.com/boun-swe574-group3/group3-pro/-/wikis/home)
-
-Protected repo trial no 2
