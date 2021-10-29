@@ -14,6 +14,10 @@ import re
 import spacy
 from spacy.lang.en.stop_words import STOP_WORDS
 import string
+from tensorflow.keras.regularizers import Regularizer
+from tensorflow.python.keras.regularizers import L1
+
+
 punctuations = string.punctuation
 stop_words = spacy.lang.en.stop_words.STOP_WORDS
 nlp = spacy.load("en_core_web_sm")
@@ -47,7 +51,9 @@ class Model:
         for i in range(len(train_sentences)):
             sentence = self.tokenize(train_sentences[i])
             train_sentences[i] = sentence
-
+        for i in range(len(val_sentences)):
+            sentence = self.tokenize(val_sentences[i])
+            val_sentences[i] = sentence
         return train_sentences, val_sentences, train_labels, val_labels
 
     def tokenize(self, words):
@@ -126,11 +132,13 @@ class Model:
         x = embedding(x)
         x = layers.LSTM(64, return_sequences=True)(x)
         x = layers.Dropout(0.2)(x)
+        x = layers.LSTM(64, return_sequences=True)(x)
+        x = layers.Dropout(0.2)(x)
         x = layers.LSTM(64)(x)
-       
-        x = layers.Dense(64, activation="relu")(x)
-        x = layers.Dense(32, activation="relu")(x)
-        x = layers.Dense(16, activation='relu')(x)
+        x = layers.Dropout(0.2)(x)
+        x = layers.Dense(64, activity_regularizer=L1(0.01), activation="relu")(x)
+        #x = layers.Dense(32, activity_regularizer=L1(0.01), activation="relu")(x)
+        x = layers.Dense(16, activity_regularizer=L1(0.01), activation='relu')(x)
         outputs = layers.Dense(3, activation="softmax")(x)
         model = tf.keras.Model(inputs, outputs)
 

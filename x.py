@@ -25,32 +25,32 @@ tweets = pd.read_csv('/home/kburakozer/Documents/SWE/SWE/3. Term/SWE599/Airline/
 
 
 
-def tokenize(words):
-    words = words.split(',')
-    new_list = []
-    new_str = " "
-    tokenized_str = " "
+# def tokenize(words):
+#     words = words.split(',')
+#     new_list = []
+#     new_str = " "
+#     tokenized_str = " "
 
-    for item in words:
-        item = re.sub(r"[0-9]", '', item)
-        item = re.sub(r'#\S+', '', item)
-        item = re.sub(r'\S@\S+', '', item)
-        item = re.sub(r'\S+com', '', item)
-        table = item.maketrans("", "", punctuations)
-        item = item.translate(table)
-        new_list.append(item)
+#     for item in words:
+#         item = re.sub(r"[0-9]", '', item)
+#         item = re.sub(r'#\S+', '', item)
+#         item = re.sub(r'\S@\S+', '', item)
+#         item = re.sub(r'\S+com', '', item)
+#         table = item.maketrans("", "", punctuations)
+#         item = item.translate(table)
+#         new_list.append(item)
     
-    #creating token object
-    tokens = nlp(new_str.join(new_list))
+#     #creating token object
+#     tokens = nlp(new_str.join(new_list))
 
     
 
-    #lower, strip and lemmatize
-    tokens = [word.lemma_.lower().strip() if word.lemma_ != "-PRON-" else word.lower_ for word in tokens]
+#     #lower, strip and lemmatize
+#     tokens = [word.lemma_.lower().strip() if word.lemma_ != "-PRON-" else word.lower_ for word in tokens]
     
-    #remove stopwords, and exclude words less than 2 characters
-    tokens = [word for word in tokens if word not in stop_words and word not in punctuations and len(word) > 2]
-    return tokenized_str.join(tokens)
+#     #remove stopwords, and exclude words less than 2 characters
+#     tokens = [word for word in tokens if word not in stop_words and word not in punctuations and len(word) > 2]
+#     return tokenized_str.join(tokens)
 
 max_vocab_length = 10000
 max_length = 20
@@ -67,9 +67,9 @@ train_sentences, val_sentences, train_labels, val_labels = train_test_split(sent
                                                                             random_state=42)
 
 
-for i in range(len(train_sentences)):
-    sentence = tokenize(train_sentences[i])
-    train_sentences[i] = sentence
+# for i in range(len(train_sentences)):
+#     sentence = tokenize(train_sentences[i])
+#     train_sentences[i] = sentence
 
 # def tokenize(words):
 #     words = words.split(',')
