@@ -9,7 +9,7 @@ clang==5.0
 click==8.0.3
 cycler==0.10.0
 cymem==2.0.6
-en-core-web-sm==3.1.0
+
 flatbuffers==1.12
 gast==0.4.0
 google-auth==2.3.0

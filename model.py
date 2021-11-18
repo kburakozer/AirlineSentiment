@@ -6,6 +6,7 @@ from tensorflow.keras.layers import TextVectorization
 from tensorflow.keras import layers
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
+from sklearn.cluster import KMeans
 from sklearn.pipeline import Pipeline
 from sklearn import preprocessing
 from keras.utils import np_utils
@@ -16,11 +17,12 @@ from spacy.lang.en.stop_words import STOP_WORDS
 import string
 from tensorflow.keras.regularizers import Regularizer
 from tensorflow.python.keras.regularizers import L1
-
+import matplotlib.pyplot as plt
 
 punctuations = string.punctuation
-stop_words = spacy.lang.en.stop_words.STOP_WORDS
 nlp = spacy.load("en_core_web_sm")
+stop_words = spacy.lang.en.stop_words.STOP_WORDS
+
 
 class Model:
     max_vocab_length = 10000
@@ -113,6 +115,22 @@ class Model:
         score = model.score(val_sentences, val_labels)
 
         return score
+
+    def k_means(self):
+        train_sentences, val_sentences, train_labels, val_labels = self.data_set(self.path)
+        model = Pipeline([
+            ("tfidf", TfidfVectorizer()),
+            ("clf", KMeans())
+        ])
+        labels = model.fit(train_sentences, train_labels)
+        df = pd.DataFrame(labels)
+        filtered_label0 = df[labels == 0]
+        
+        #plotting the results
+        plt.scatter(filtered_label0[:,0] , filtered_label0[:,1])
+        plt.show()
+        
+
 
     def calculate_results(self,y_true, y_pred):
         model_accuracy = accuracy_score(y_true,y_pred) * 100
