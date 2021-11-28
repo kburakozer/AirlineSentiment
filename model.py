@@ -29,19 +29,24 @@ class Model:
     max_length = 20
     epochs = 5
     path = ""
+    values = ""
+    labels = ""
+    category_num = 10
 
-    def __init__(self, p):
-        self.path = p
+    def __init__(self, path, values, labels):
+        self.path = path
+        self.values = values
+        self.labels = labels
 
-
-    def data_set(self, path):
+    def data_set(self):
         
         # read tweets and tags csv files
-        tweets = pd.read_csv(path)
+        tweets = pd.read_csv(self.path)
 
-        sentences = tweets["text"]
-        labels = tweets["airline_sentiment"]
-        labels = tweets["airline_sentiment"].to_numpy()
+
+        sentences = tweets[self.values]
+        labels = tweets[self.labels]
+        labels = tweets[self.labels].to_numpy()
         le = preprocessing.LabelEncoder()
         le.fit(labels)
         labels = le.transform(labels)
@@ -79,10 +84,10 @@ class Model:
         
 
         #lower, strip and lemmatize
-        tokens = [word.lemma_.lower().strip() if word.lemma_ != "-PRON-" else word.lower_ for word in tokens]
+        # tokens = [word.lemma_.lower().strip() if word.lemma_ != "-PRON-" else word.lower_ for word in tokens]
         
         #remove stopwords, and exclude words less than 2 characters
-        tokens = [word for word in tokens if word not in stop_words and word not in punctuations and len(word) > 2]
+        # tokens = [word for word in tokens if word not in stop_words and word not in punctuations and len(word) > 2]
         return tokenized_str.join(tokens) 
 
 
@@ -91,7 +96,7 @@ class Model:
                                     output_mode="int",
                                     output_sequence_length=self.max_length)
 
-        train_sentences, val_sentences, train_labels, val_labels = self.data_set(self.path)
+        train_sentences, val_sentences, train_labels, val_labels = self.data_set()
         text_vectorizer.adapt(train_sentences)
 
         return text_vectorizer
@@ -105,7 +110,7 @@ class Model:
 
 
     def bayes_model(self):
-        train_sentences, val_sentences, train_labels, val_labels = self.data_set(self.path)
+        train_sentences, val_sentences, train_labels, val_labels = self.data_set()
         model = Pipeline([
             ("tfidf", TfidfVectorizer()),
             ("clf", MultinomialNB())
@@ -117,18 +122,22 @@ class Model:
         return score
 
     def k_means(self):
-        train_sentences, val_sentences, train_labels, val_labels = self.data_set(self.path)
+        train_sentences, val_sentences, train_labels, val_labels = self.data_set()
         model = Pipeline([
             ("tfidf", TfidfVectorizer()),
-            ("clf", KMeans())
+            ("clf", KMeans(n_clusters=3))
         ])
-        labels = model.fit(train_sentences, train_labels)
-        df = pd.DataFrame(labels)
-        filtered_label0 = df[labels == 0]
+        model = model.fit(train_sentences, train_labels)
+        predictions = model.predict(val_sentences)
+        # return self.calculate_results(val_labels,predictions)
+        # return predictions
+        # df = pd.DataFrame(model)
+        # filtered_label0 = df[labels == 0]
         
-        #plotting the results
-        plt.scatter(filtered_label0[:,0] , filtered_label0[:,1])
-        plt.show()
+        # plotting the results
+        # plt.scatter(filtered_label0[:,0] , filtered_label0[:,1])
+        # plt.scatter(df)
+        # plt.show()
         
 
 
@@ -141,33 +150,115 @@ class Model:
                 "f1": model_f1}
         return model_results
 
+    def plot_loss_curves(self, history):
+        """
+        Returns separate loss curves for training and validation metrics.
+        """ 
+        loss = history.history['loss']
+        val_loss = history.history['val_loss']
+
+        accuracy = history.history['accuracy']
+        val_accuracy = history.history['val_accuracy']
+
+        epochs = range(len(history.history['loss']))
+
+        # Plot loss
+        plt.plot(epochs, loss, label='training_loss')
+        plt.plot(epochs, val_loss, label='val_loss')
+        plt.title('Loss')
+        plt.xlabel('Epochs')
+        plt.rc('font', size=18)          # controls default text sizes
+        plt.rc('axes', titlesize=18)     # fontsize of the axes title
+        plt.rc('axes', labelsize=18)    # fontsize of the x and y labels
+        plt.rc('xtick', labelsize=18)    # fontsize of the tick labels
+        plt.rc('ytick', labelsize=18)    # fontsize of the tick labels
+        plt.rc('legend', fontsize=18)    # legend fontsize
+        plt.rc('figure', titlesize=18)  # fontsize of the figure title
+
+        plt.legend()
+
+        # Plot accuracy
+        plt.figure()
+        plt.plot(epochs, accuracy, label='training_accuracy')
+        plt.plot(epochs, val_accuracy, label='val_accuracy')
+        plt.title('Accuracy')
+        plt.xlabel('Epochs')
+        plt.rc('font', size=18)          # controls default text sizes
+        plt.rc('axes', titlesize=18)     # fontsize of the axes title
+        plt.rc('axes', labelsize=18)    # fontsize of the x and y labels
+        plt.rc('xtick', labelsize=18)    # fontsize of the tick labels
+        plt.rc('ytick', labelsize=18)    # fontsize of the tick labels
+        plt.rc('legend', fontsize=18)    # legend fontsize
+        plt.rc('figure', titlesize=18)  # fontsize of the figure title
+        plt.legend()
+
+        plt.show()
+
     def LSTM(self):
-        train_sentences, val_sentences, train_labels, val_labels = self.data_set(self.path)
+        train_sentences, val_sentences, train_labels, val_labels = self.data_set()
         inputs = layers.Input(shape=(1,), dtype="string")
         embedding = self.embedding()
         text_vectorizer = self.vectorizer()
         x = text_vectorizer(inputs)
         x = embedding(x)
-        x = layers.LSTM(64, return_sequences=True)(x)
+        x = layers.LSTM(32, return_sequences=True,activation="relu")(x)
         x = layers.Dropout(0.2)(x)
-        x = layers.LSTM(64, return_sequences=True)(x)
+        x = layers.LSTM(16, activation="relu")(x)
         x = layers.Dropout(0.2)(x)
-        x = layers.LSTM(64)(x)
-        x = layers.Dropout(0.2)(x)
-        x = layers.Dense(64, activity_regularizer=L1(0.01), activation="relu")(x)
-        #x = layers.Dense(32, activity_regularizer=L1(0.01), activation="relu")(x)
-        x = layers.Dense(16, activity_regularizer=L1(0.01), activation='relu')(x)
-        outputs = layers.Dense(3, activation="softmax")(x)
+        # x = layers.Dropout(0.2)(x)
+        # x = layers.LSTM(64,return_sequences=True)(x)
+        # x = layers.LSTM(128)(x)
+        # x = layers.Dropout(0.2)(x)
+        # x = layers.Dense(64, activity_regularizer=L1(0.01), activation="relu")(x)
+  
+        # x = layers.Dense(64, activation="relu")(x)
+        x = layers.Dense(16, activation="relu")(x)
+        # x = layers.Dense(16, activation='relu')(x)
+        outputs = layers.Dense(self.category_num, activation="softmax")(x)
         model = tf.keras.Model(inputs, outputs)
 
         model.compile(loss="categorical_crossentropy",
                       optimizer=tf.keras.optimizers.Adam(),
                       metrics=["accuracy"])
-        model.fit(train_sentences,train_labels, epochs=self.epochs)
+        history = model.fit(train_sentences,
+                            train_labels, 
+                            validation_data= (val_sentences, val_labels),
+                            epochs=self.epochs)
 
+        self.plot_loss_curves(history)
         model_probs = model.predict(val_sentences)
         model_probs = tf.squeeze(tf.round(model_probs))
         results = self.calculate_results(val_labels, model_probs)
         return results
 
+    def CNN(self):
+        embedding = self.embedding()
+        text_vectorizer = self.vectorizer()
+        train_sentences, val_sentences, train_labels, val_labels = self.data_set()
+        inputs = layers.Input(shape=(1,), dtype="string")
+
+        x = text_vectorizer(inputs)
+        x = embedding(x)
+        x = layers.Conv1D(filters=20,
+                          kernel_size=3,
+                          activation="relu",
+                          padding="valid")(x)
+        x = layers.Conv1D(8, 3, activation="relu")(x)
+        # x = layers.Conv1D(8, 2, activation="relu")(x)
+        x = layers.GlobalMaxPooling1D()(x)
+        outputs = layers.Dense(self.category_num, activation="softmax")(x)
+        model = tf.keras.Model(inputs, outputs)
+        model.compile(loss="categorical_crossentropy",
+                      optimizer=tf.keras.optimizers.Adam(),
+                      metrics=["accuracy"])
+        history = model.fit(train_sentences,
+                            train_labels, 
+                            validation_data= (val_sentences, val_labels),
+                            epochs=self.epochs)
+
+        self.plot_loss_curves(history)
+        model_probs = model.predict(val_sentences)
+        model_probs = tf.squeeze(tf.round(model_probs))
+        results = self.calculate_results(val_labels, model_probs)
+        return results
 
