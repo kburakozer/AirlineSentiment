@@ -25,13 +25,14 @@ stop_words = spacy.lang.en.stop_words.STOP_WORDS
 
 
 class Model:
-    max_vocab_length = 10000
-    max_length = 20
+    max_vocab_length = 15000
+    max_length = 15
     epochs = 5
     path = ""
     values = ""
     labels = ""
     category_num = 10
+    l_r = 0.002
 
     def __init__(self, path, values, labels):
         self.path = path
@@ -42,6 +43,7 @@ class Model:
         
         # read tweets and tags csv files
         tweets = pd.read_csv(self.path)
+        tweets = tweets.sample(frac=1, random_state=42)
 
 
         sentences = tweets[self.values]
@@ -55,12 +57,12 @@ class Model:
                                                                                     labels,
                                                                                     test_size=0.2,
                                                                                     random_state=42)
-        for i in range(len(train_sentences)):
-            sentence = self.tokenize(train_sentences[i])
-            train_sentences[i] = sentence
-        for i in range(len(val_sentences)):
-            sentence = self.tokenize(val_sentences[i])
-            val_sentences[i] = sentence
+        # for i in range(len(train_sentences)):
+        #     sentence = self.tokenize(train_sentences[i])
+        #     train_sentences[i] = sentence
+        # for i in range(len(val_sentences)):
+        #     sentence = self.tokenize(val_sentences[i])
+        #     val_sentences[i] = sentence
         return train_sentences, val_sentences, train_labels, val_labels
 
     def tokenize(self, words):
@@ -83,11 +85,11 @@ class Model:
 
         
 
-        #lower, strip and lemmatize
-        # tokens = [word.lemma_.lower().strip() if word.lemma_ != "-PRON-" else word.lower_ for word in tokens]
+        # lower, strip and lemmatize
+        tokens = [word.lemma_.lower().strip() if word.lemma_ != "-PRON-" else word.lower_ for word in tokens]
         
-        #remove stopwords, and exclude words less than 2 characters
-        # tokens = [word for word in tokens if word not in stop_words and word not in punctuations and len(word) > 2]
+        # remove stopwords, and exclude words less than 2 characters
+        tokens = [word for word in tokens if word not in stop_words and word not in punctuations and len(word) > 2]
         return tokenized_str.join(tokens) 
 
 
@@ -121,23 +123,7 @@ class Model:
 
         return score
 
-    def k_means(self):
-        train_sentences, val_sentences, train_labels, val_labels = self.data_set()
-        model = Pipeline([
-            ("tfidf", TfidfVectorizer()),
-            ("clf", KMeans(n_clusters=3))
-        ])
-        model = model.fit(train_sentences, train_labels)
-        predictions = model.predict(val_sentences)
-        # return self.calculate_results(val_labels,predictions)
-        # return predictions
-        # df = pd.DataFrame(model)
-        # filtered_label0 = df[labels == 0]
-        
-        # plotting the results
-        # plt.scatter(filtered_label0[:,0] , filtered_label0[:,1])
-        # plt.scatter(df)
-        # plt.show()
+
         
 
 
@@ -194,6 +180,46 @@ class Model:
 
         plt.show()
 
+    # nain model
+    # def LSTM(self):
+    #     train_sentences, val_sentences, train_labels, val_labels = self.data_set()
+    #     inputs = layers.Input(shape=(1,), dtype="string")
+    #     embedding = self.embedding()
+    #     text_vectorizer = self.vectorizer()
+    #     x = text_vectorizer(inputs)
+    #     x = embedding(x)
+    #     x = layers.LSTM(32, return_sequences=True,activation="relu")(x)
+    #     x = layers.Dropout(0.2)(x)
+    #     x = layers.LSTM(16, activation="relu")(x)
+    #     x = layers.Dropout(0.2)(x)
+    #     # x = layers.Dropout(0.2)(x)
+    #     # x = layers.LSTM(64,return_sequences=True)(x)
+    #     # x = layers.LSTM(128)(x)
+    #     # x = layers.Dropout(0.2)(x)
+    #     # x = layers.Dense(64, activity_regularizer=L1(0.01), activation="relu")(x)
+  
+    #     # x = layers.Dense(64, activation="relu")(x)
+    #     x = layers.Dense(16, activation="relu")(x)
+    #     # x = layers.Dense(16, activation='relu')(x)
+    #     outputs = layers.Dense(self.category_num, activation="softmax")(x)
+    #     model = tf.keras.Model(inputs, outputs)
+
+    #     model.compile(loss="categorical_crossentropy",
+    #                   optimizer=tf.keras.optimizers.Adam(learning_rate=self.l_r),
+    #                   metrics=["accuracy"])
+    #     history = model.fit(train_sentences,
+    #                         train_labels, 
+    #                         validation_data= (val_sentences, val_labels),
+    #                         epochs=self.epochs)
+
+    #     self.plot_loss_curves(history)
+    #     model_probs = model.predict(val_sentences)
+    #     model_probs = tf.squeeze(tf.round(model_probs))
+    #     results = self.calculate_results(val_labels, model_probs)
+    #     return results
+    
+    
+    # experiment
     def LSTM(self):
         train_sentences, val_sentences, train_labels, val_labels = self.data_set()
         inputs = layers.Input(shape=(1,), dtype="string")
@@ -201,10 +227,12 @@ class Model:
         text_vectorizer = self.vectorizer()
         x = text_vectorizer(inputs)
         x = embedding(x)
-        x = layers.LSTM(32, return_sequences=True,activation="relu")(x)
-        x = layers.Dropout(0.2)(x)
-        x = layers.LSTM(16, activation="relu")(x)
-        x = layers.Dropout(0.2)(x)
+        x = layers.LSTM(32,return_sequences=True, activation="relu")(x)
+        x = layers.Dropout(0.5)(x)
+        x = layers.LSTM(16,activation="relu")(x)
+        x = layers.Dropout(0.5)(x)
+        # x = layers.LSTM(16, activation="relu")(x)
+        # x = layers.Dropout(0.2)(x)
         # x = layers.Dropout(0.2)(x)
         # x = layers.LSTM(64,return_sequences=True)(x)
         # x = layers.LSTM(128)(x)
@@ -212,13 +240,13 @@ class Model:
         # x = layers.Dense(64, activity_regularizer=L1(0.01), activation="relu")(x)
   
         # x = layers.Dense(64, activation="relu")(x)
-        x = layers.Dense(16, activation="relu")(x)
-        # x = layers.Dense(16, activation='relu')(x)
+        # x = layers.Dense(16, activation="relu")(x)
+        # x = layers.Dense(16, activation='sigmoid')(x)
         outputs = layers.Dense(self.category_num, activation="softmax")(x)
         model = tf.keras.Model(inputs, outputs)
 
         model.compile(loss="categorical_crossentropy",
-                      optimizer=tf.keras.optimizers.Adam(),
+                      optimizer=tf.keras.optimizers.Adam(learning_rate=self.l_r),
                       metrics=["accuracy"])
         history = model.fit(train_sentences,
                             train_labels, 
@@ -230,7 +258,6 @@ class Model:
         model_probs = tf.squeeze(tf.round(model_probs))
         results = self.calculate_results(val_labels, model_probs)
         return results
-
     def CNN(self):
         embedding = self.embedding()
         text_vectorizer = self.vectorizer()
@@ -243,7 +270,7 @@ class Model:
                           kernel_size=3,
                           activation="relu",
                           padding="valid")(x)
-        x = layers.Conv1D(8, 3, activation="relu")(x)
+        # x = layers.Conv1D(8, 3, activation="relu")(x)
         # x = layers.Conv1D(8, 2, activation="relu")(x)
         x = layers.GlobalMaxPooling1D()(x)
         outputs = layers.Dense(self.category_num, activation="softmax")(x)

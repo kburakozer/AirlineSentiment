@@ -30,12 +30,23 @@ stop_words = spacy.lang.en.stop_words.STOP_WORDS
 # print(news["short_description"][0])
 
 path = '/home/kburakozer/Documents/SWE/SWE/3. Term/SWE599/AirlineSentiment/archive/NewsCategorizer.csv'
+news = pd.read_csv(path)
 # airline_model = Model(path, "text", "airline_sentiment")
-news_model = Model(path, "short_description", "category")
+# news_model = Model(path, "short_description", "category")
 # sentences = tweets[airline_model.values]
 # labels = tweets[airline_model.labels]
 
 # print(labels)
 
-train_sentences, val_sentences, train_labels, val_labels = news_model.data_set()
-print(news_model.LSTM())
+# train_sentences, val_sentences, train_labels, val_labels = news_model.data_set()
+# print(news_model.CNN())
+
+desc = news["short_description"]
+liste = []
+for i in desc:
+    word_list = desc[i].split(" ")
+    for item in word_list:
+        liste.append(item)
+print(len(liste))
+# for i in range(200, 220):
+#     print(len(desc[i]))
